@@ -58,8 +58,10 @@ WinDiskManagement::WinDiskManagement(QObject *parent, bool isHelper)
 
     // This needs to be initialized before any RPC communication occurs
     // Currently when used in WinDriveManager we are good.
-    res = CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_DEFAULT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE, 0);
-    if (FAILED(res)) {
+    // RPC_E_TOO_LATE means CoInitializeSecurity was already called (e.g. by Qt's platform
+    // plugin) - treat as non-fatal and continue with whatever security was set up
+    res = CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_CONNECT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE, 0);
+    if (FAILED(res) && res != RPC_E_TOO_LATE) {
         _com_error err(res);
         logMessage(QtWarningMsg, QStringLiteral("Failed to initialize security. Error = %1").arg(err.ErrorMessage()));
         return;
@@ -82,7 +84,7 @@ WinDiskManagement::WinDiskManagement(QObject *parent, bool isHelper)
     res = m_IWbemLocator->ConnectServer(_bstr_t(L"ROOT\\Microsoft\\Windows\\Storage"), NULL, NULL, NULL, 0, NULL, NULL, &m_IWbemStorageServices);
     if (FAILED(res)) {
         _com_error err(res);
-        logMessage(QtWarningMsg, QStringLiteral("Could not connect to Window Storage. Error = %1").arg(QString::fromWCharArray(err.ErrorMessage())));
+        logMessage(QtWarningMsg, QStringLiteral("Could not connect to Windows Storage. Error = %1").arg(QString::fromWCharArray(err.ErrorMessage())));
         return;
     }
 
